@@ -1,0 +1,8 @@
+[
+  { "id": "team-a", "name": "ทีมเหย้า", "shortName": "HOME", "color": "#e11d48" },
+  { "id": "team-b", "name": "ทีมเยือน", "shortName": "AWAY", "color": "#0369a1" },
+  { "id": "team-c", "name": "นครราชสีมา", "shortName": "KKU", "color": "#7c3aed" },
+  { "id": "team-d", "name": "สุพรรณบุรี", "shortName": "SPB", "color": "#15803d" },
+  { "id": "team-e", "name": "ชลบุรี", "shortName": "CBI", "color": "#ea580c" },
+  { "id": "team-f", "name": "กรุงเทพฯ", "shortName": "BKK", "color": "#0f766e" }
+]

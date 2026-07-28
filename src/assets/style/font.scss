@@ -1,0 +1,7 @@
+/* Thai + Latin fonts via Google Fonts (no local TTF required) */
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Kanit:wght@400;500;600;700&family=Mitr:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap');
+
+body,
+#app {
+  font-family: 'Sarabun', 'Prompt', 'Noto Sans Thai', 'Segoe UI', Tahoma, sans-serif;
+}

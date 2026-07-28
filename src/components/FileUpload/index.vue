@@ -1,0 +1,191 @@
+<template>
+  <el-dialog v-model="dialogVisible" title="นำเข้าไฟล์" width="35%" class="upload-dialog" :before-close="closeUpload">
+    <el-upload class="upload-demo" ref="uploadRef" :on-exceed="handleExceed" drag action="http" :http-request="uploadHandle" :limit="1" :accept="fileAccept" v-loading="uploading">
+      <el-icon :size="50">
+        <UploadFilled />
+      </el-icon>
+      <div class="el-upload__text">
+        ลากไฟล์มาวางที่นี่ หรือ <em>เลือกไฟล์อัปโหลด</em>
+      </div>
+      <template #tip>
+        <div class="el-upload__tip">
+          รองรับ PSD / PDF / SVG / รูปภาพ
+        </div>
+      </template>
+    </el-upload>
+  </el-dialog>
+</template>
+
+<script lang="ts" setup>
+import { uploadFile } from '@/api/file'
+import { propertiesToInclude, WorkSpaceDrawData } from '@/configs/canvas'
+import useCanvasScale from '@/hooks/useCanvasScale'
+import useHandleCreate from '@/hooks/useHandleCreate'
+import useHandleTemplate from '@/hooks/useHandleTemplate'
+import { useTemplatesStore } from '@/store'
+import { Template } from "@/types/canvas"
+import { getImageDataURL, getImageText } from '@/utils/image'
+import useCanvas from '@/views/Canvas/useCanvas'
+import { UploadFilled } from '@element-plus/icons-vue'
+import { genFileId, UploadInstance, UploadProps, UploadRawFile } from "element-plus"
+import { Object as FabricObject, Image, loadSVGFromString } from 'fabric'
+import { nanoid } from 'nanoid'
+import { ref, watch } from 'vue'
+
+
+const templatesStore = useTemplatesStore()
+const { setCanvasTransform } = useCanvasScale()
+const { createImageElement, createVideoElement } = useHandleCreate()
+const { addTemplate } = useHandleTemplate()
+const dialogVisible = ref(false)
+const uploading = ref(false)
+const fileAccept = ref('.pdf,.psd,.cdr,.ai,.svg,.jpg,.jpeg,.png,.webp,.json,.mp4')
+const uploadRef = ref<UploadInstance>()
+const props = defineProps({
+  visible: {
+    type: Boolean,
+    required: true,
+  },
+})
+
+const emit = defineEmits<{
+  (event: 'close'): void
+}>()
+
+watch(() => props.visible, (val) => {
+  dialogVisible.value = val
+  if (val) {
+    uploadRef.value?.clearFiles()
+  }
+})
+
+const closeUpload = () => {
+  emit('close')
+}
+
+const generateSVGTemplate = async (dataText: string) => {
+  const content = await loadSVGFromString(dataText)
+  const options = content.options
+  const svgData: any[] = []
+  content.objects.slice(0, 1000).forEach(ele => svgData.push((ele as FabricObject).toObject(propertiesToInclude)))
+  WorkSpaceDrawData.width = options.width
+  WorkSpaceDrawData.height = options.height
+  const emptyTemplate: Template = {
+    id: nanoid(10),
+    version: '6.12',
+    zoom: 1,
+    width: options.width,
+    height: options.height,
+    clip: 2,
+    objects: [WorkSpaceDrawData, ...svgData],
+    workSpace: {
+      fillType: 0,
+      left: 0,
+      top: 0,
+      angle: 0,
+      scaleX: 1,
+      scaleY: 1,
+    }
+  }
+  return emptyTemplate
+}
+
+const uploadHandle = async (option: any) => {
+  const [ canvas ] = useCanvas()
+  const filename = option.file.name
+  const fileSuffix = filename.split('.').pop()
+  if (!fileAccept.value.split(',').includes(`.${fileSuffix}`)) return
+  if (fileSuffix === 'svg') {
+    const dataText = await getImageText(option.file)
+    const emptyTemplate = await generateSVGTemplate(dataText)
+    await templatesStore.addTemplate(emptyTemplate)
+    // await templatesStore.renderTemplate()
+    setCanvasTransform()
+    emit('close')
+    return
+  }
+  if (fileSuffix === 'json') {
+    const dataText = await getImageText(option.file)
+    const template = JSON.parse(dataText)
+    addTemplate(template)
+    emit('close')
+    return
+  }
+  if (['jpg', 'jpeg', 'png', 'webp'].includes(fileSuffix)) {
+    const dataURL = await getImageDataURL(option.file)
+    createImageElement(dataURL)
+    emit('close')
+    return
+  }
+  if (['mp4'].includes(fileSuffix)) {
+    const dataURL = URL.createObjectURL(option.file)
+    createVideoElement(dataURL)
+    emit('close')
+    return
+  }
+  uploading.value = true
+  const res = await uploadFile(option.file, fileSuffix)
+  uploading.value = false
+  if (res && res.data.code === 200) {
+    const template = res.data.data
+    if (!template) return
+    if (['pdf', 'ai'].includes(fileSuffix)) {
+      // const parseTemplate: Template[] = []
+      // const pdfTemplate = template as any[]
+      // for (let i = 0; i < pdfTemplate.length; i++) {
+      //   const dataText = pdfTemplate[i]
+      //   // const emptyTemplate = await generateSVGTemplate(dataText)
+      //   // parseTemplate.push(emptyTemplate)
+      // }
+      
+      await templatesStore.addTemplate(template)
+      setCanvasTransform()
+      emit('close')
+      return
+    }
+    await templatesStore.addTemplate(template)
+    setCanvasTransform()
+    emit('close')
+  }
+}
+
+const setImageMask = (image: Image) => {
+  if (!image.mask) return
+  // const [ pixi ] = usePixi()
+  // pixi.postMessage({
+  //   id: image.id,
+  //   type: "mask", 
+  //   src: image.getSrc(),
+  //   mask: JSON.stringify(image.mask), 
+  //   width: image.width, 
+  //   height: image.height
+  // });
+}
+
+const handleExceed: UploadProps['onExceed'] = (files: File[]) => {
+  uploadRef.value!.clearFiles()
+  const file = files[0] as UploadRawFile
+  file.uid = genFileId()
+  uploadRef.value!.handleStart(file)
+}
+
+</script>
+
+<style lang="scss" scoped>
+
+</style>
+<style>
+.upload-dialog .el-dialog__header {
+  text-align: left
+}
+.upload-dialog .el-upload__tip {
+  text-align: left;
+}
+.upload-dialog .el-upload-list__item-name {
+  padding: 0;
+}
+.upload-dialog .el-upload-list__item-info {
+  width: 100%;
+  margin-left: 0;
+}
+</style>
