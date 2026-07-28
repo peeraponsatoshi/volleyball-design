@@ -1,0 +1,14 @@
+[
+  { "id": "p01", "name": "นักกีฬา 01", "number": 1, "position": "ตัวเซ็ต", "teamId": "team-a" },
+  { "id": "p02", "name": "นักกีฬา 02", "number": 2, "position": "ตัวตบหัวเสา", "teamId": "team-a" },
+  { "id": "p03", "name": "นักกีฬา 03", "number": 3, "position": "ตัวบล็อกกลาง", "teamId": "team-a" },
+  { "id": "p04", "name": "นักกีฬา 04", "number": 4, "position": "ตัวรับอิสระ", "teamId": "team-a" },
+  { "id": "p05", "name": "นักกีฬา 05", "number": 5, "position": "ตัวตบตรงข้าม", "teamId": "team-a" },
+  { "id": "p06", "name": "นักกีฬา 06", "number": 6, "position": "ตัวตบหัวเสา", "teamId": "team-a" },
+  { "id": "p07", "name": "นักกีฬา 07", "number": 7, "position": "ตัวเซ็ต", "teamId": "team-b" },
+  { "id": "p08", "name": "นักกีฬา 08", "number": 8, "position": "ตัวตบหัวเสา", "teamId": "team-b" },
+  { "id": "p09", "name": "นักกีฬา 09", "number": 9, "position": "ตัวบล็อกกลาง", "teamId": "team-b" },
+  { "id": "p10", "name": "นักกีฬา 10", "number": 10, "position": "ตัวรับอิสระ", "teamId": "team-b" },
+  { "id": "p11", "name": "นักกีฬา 11", "number": 11, "position": "ตัวตบตรงข้าม", "teamId": "team-b" },
+  { "id": "p12", "name": "นักกีฬา 12", "number": 12, "position": "ตัวตบหัวเสา", "teamId": "team-b" }
+]
