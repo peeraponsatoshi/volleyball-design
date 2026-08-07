@@ -1,39 +1,52 @@
-## เป้าหมาย
-ทำให้เว็บรองรับ "นำเข้าไฟล์ PSD จริง ๆ" แบบประมวลผลในตัว (client-side) — ไม่ต้องพึ่ง backend ที่ไม่มีบน Vercel static อีกต่อไป
+## แผนการพัฒนาระบบเชื่อมต่อ Google Drive (ซิงก์งานข้ามคอมและมือถือ)
 
-## เหตุผล / สถานะปัจจุบัน
-- ตอนนี้ UI รับ `.psd` แต่โค้ดส่งไฟล์ไปให้ backend `/api/design/parse/file`; บนเว็บ static ที่ deploy แล้วไม่มี backend → โยน PSD ไม่ได้
-- เราจะใช้ไลบรารี **ag-psd** (pure JS/TS, รันในเบราว์เซอร์ได้, ผ่าน Context7 ยืนยัน API แล้ว: `readPsd(ArrayBuffer)` → `psd.width/height/children`, `layer.canvas` (HTMLCanvasElement), `layer.left/top/width/height`, `layer.opacity`, `layer.blendMode`, `layer.hidden`)
-- เลเยอร์ใน PSD ตำแหน่งเป็นพิกเซลของเอกสาร และ Template ที่ตัวแก้ไขใช้มี width/height = พิกเซล + `zoom:1` → ตำแหน่งจับคู่ 1:1 พอดี
+### 🎯 เป้าหมาย
+ให้ผู้ใช้งานสามารถ **"บันทึกงานลง Google Drive"** และ **"เปิดแก้งานจาก Google Drive"** ได้โดยตรงผ่านหน้าเว็บทั้งบนคอมพิวเตอร์และโทรศัพท์มือถือ โดยไม่ต้องดาวน์โหลดไฟล์มาถือเอง ข้อมูลเก็บอยู่ใน Google Drive ส่วนตัวของผู้ใช้ ปลอดภัย ความจุ 15 GB ฟรี ไม่โดนตัดลบ
 
-## รูปแบบที่เลือก
-**แยกเลเยอร์เป็นรูปภาพ** — แต่ละเลเยอร์ (รวมตัวหนังสือ) นำเข้าเป็น object รูปภาพแยกชิ้น: ขยับ/ย่อ/ลบ/เรียง ลำดับได้ทีละเลเยอร์ (ตัวหนังสือยังเป็นภาพ v1)
+---
 
-## วิธีทำ
-1. **ติดตั้ง**: `pnpm add ag-psd`
-2. **สร้าง `src/utils/psd.ts`** — ฟังก์ชัน `psdToTemplate(file: File): Promise<Template>`:
-   - `const buffer = await file.arrayBuffer()` → `readPsd(buffer)`
-   - สร้าง Template ตาม pattern `generateSVGTemplate` (ใน `src/components/FileUpload/index.vue`): `WorkSpaceDrawData.width/height = psd.width/height`, `objects[0] = WorkSpaceDrawData`, `width/height = psd.width/height`, `zoom:1`, `clip:2`, `version:'6.12'`
-   - flatten เลเยอร์แบบ recursive (รองรับกลุ่ม/โฟลเดอร์):
-     - ล้าง `hidden` ทิ้ง
-     - ถ้ามี `children` → ทำ recursive ตามลำดับ (โฟลเดอร์)
-     - ถ้ามี `canvas` ข้อมูล → `cv.toDataURL('image/png')` แล้วสร้าง object fabric `Image` (literal serialized): `type:'Image'`, `src:dataURL`, `crossOrigin:'anonymous'`, `left/top/width/height` จาก layer, `opacity: layer.opacity`, `globalCompositeOperation` map จาก `layer.blendMode` (fabric รองรับชื่อโหมดเดียวกับ Photoshop — `propertiesToInclude` มี field นี้อยู่แล้ว), `id:nanoid(10)`, `name: layer.name`, `visible:true`
-     - เรียง `objects` ตามลำดับ bottom→top (ตรง z-order)
-   - โหมด blend/mask ขั้นซับซ้อนของ group ได้ผลลัพธ์โดยประมาณ (บันทึกข้อจำกัด)
-3. **Wire เข้า `src/components/FileUpload/index.vue`** ใน `uploadHandle`: เพิ่ม branch `if (fileSuffix === 'psd')` → `templatesStore.addTemplate(await psdToTemplate(file))` → `setCanvasTransform()` → `emit('close')` ก่อนถึง backend (pdf/ai/cdr ตามเดิม)
-4. **Wire เข้า `src/plugins/directive/dropImage.ts`** (`defaultUpload`): เพิ่ม branch `psd` คล้ายกัน (แล้ว `return` เพื่อไม่ดเลยไป `uploadFile`)
-5. **Build config**: ใส่ `'ag-psd'` ใน `optimizeDeps.include` (`build/optimize.ts`) และ `manualChunks` (ตัวเลือก, กัน bundle โต)
-6. **Feedback**: ใช้ `uploading` + `v-loading` (มีอยู่แล้ว) ครอบการทำงาน, ปรับ tip เป็น "รองรับ PSD / PDF / SVG / รูปภาพ„
-7. **ยืนยัน**: `pnpm build` ไม่ error + ทดสอบด้วยไฟล์ PSD ตัวอย่าง (device)
+### 🏗️ โครงสร้างการทำงาน (Architecture)
 
-## สิ่งที่หาแพระ / ไม่ทำ
-- ตัวหนังสือจะนำเข้าเป็นภาพ (ความละเอียดตรงต้นฉบับ) — แปลงเป็นกล่องข้อความแก้ได้เป็น follow-up
-- PDF/AI/CDR ยังพึ่ง backend เหมือนเดิม (ส่วนนี้บอกไปว่าใช้ไม่ได้บน Vercel เว้นมี backend)
-- หลาย artboard → ยังนำเข้าเป็นเอกสารเดียว (flatten ตามลำดับ)
+1. **ใช้ Google Identity Services (GIS) & Drive API (Client-side 100%)**:
+   - ใช้ OAuth 2.0 สิทธิ์แบบ `https://www.googleapis.com/auth/drive.file` (เข้าถึงเฉพาะไฟล์/โฟลเดอร์ที่แอปเป็นคนสร้างขึ้นเท่านั้น ปลอดภัยสูงสุด)
+   - ไม่ต้องมี backend ประมวลผลบน Vercel static ได้ทันที 100%
 
-## ไฟล์ที่จะแก้
-- `package.json` (+ deps) / `pnpm-lock.yaml`
-- `src/utils/psd.ts` (ใหม่)
-- `src/components/FileUpload/index.vue`
-- `src/plugins/directive/dropImage.ts`
-- (ตัวเลือก) `build/optimize.ts`, `vite.config.mts`, `build/plugins.ts`
+2. **สร้างโฟลเดอร์อัตโนมัติ `Volleyball Design` ใน Google Drive**:
+   - เมื่อกดบันทึกครั้งแรก ระบบจะสร้างโฟลเดอร์ `Volleyball Design` ใน Google Drive ให้อัตโนมัติ
+   - เซฟไฟล์งานในรูปแบบ `.json` (โครงสร้างเลเยอร์เต็ม) พร้อมเซฟรูปพรีวิว (Thumbnail) เพื่อแสดงหน้าปกตอนเลือกเปิดงาน
+
+3. **ระบบจัดการสิทธิ์และจำไฟล์เดิม (Quick Save)**:
+   - บันทึก `driveFileId` ของงานปัจจุบันไว้ ทำให้พอกดบันทึกครั้งถัดไป จะเป็นการเขียนทับไฟล์เดิม ไม่เกิดไฟล์ซ้ำซ้อน
+
+---
+
+### 📝 ขั้นตอนการพัฒนา
+
+1. **สร้าง Helper `src/utils/googleDrive.ts`**:
+   - `initGoogleDriveScript()`: โหลดสคริปต์ Google GIS (`https://accounts.google.com/gsi/client`) อัตโนมัติ
+   - `requestGoogleToken()`: เปิดป๊อปอัปให้ผู้ใช้ล็อกอินบัญชี Google และขออนุญาตสิทธิ์ Drive
+   - `saveProjectToDrive(template, thumbnailDataUrl, existingFileId?)`: สร้าง/อัปเดตไฟล์งาน `.json` ในโฟลเดอร์ `Volleyball Design`
+   - `listDriveProjects()`: ดึงรายการงานออกแบบที่เซฟไว้ใน Google Drive พร้อมชื่อ วันที่แก้ไขล่าสุด และรูปพรีวิว
+   - `loadDriveProject(fileId)`: ดาวน์โหลดไฟล์งาน `.json` จาก Drive และส่งให้ตัวแก้ไขเปิดขึ้นมาทำงานทันที
+   - `deleteDriveProject(fileId)`: ลบงานที่ไม่ต้องการออกจาก Drive
+
+2. **สร้าง UI Component `src/components/GoogleDriveModal/index.vue`**:
+   - หน้าต่างแสดงรายการงานที่อยู่ใน Google Drive (การ์ดงานพร้อมรูปตัวอย่าง วันที่ ปุ่มเปิดแก้ และปุ่มลบ)
+   - สถานะการเชื่อมต่อ (แสดงชื่อผู้ใช้ Google / ปุ่มสลับบัญชี)
+
+3. **เพิ่มปุ่มควบคุมในหน้า Editor (`src/views/Editor/CanvasRight/index.vue`)**:
+   - เพิ่มปุ่ม ☁️ **"Google Drive"** ข้าง ๆ ปุ่มดาวน์โหลด/แชร์
+   - มีเมนูดร็อปดาวน์:
+     - 💾 **บันทึกไปที่ Google Drive**
+     - 📂 **เปิดงานจาก Google Drive**
+
+4. **การตั้งค่า Google OAuth Client ID**:
+   - รองรับการใส่ `VITE_GOOGLE_CLIENT_ID` ในไฟล์ `.env.local` หรือ Vercel Environment Variables
+   - เพิ่มคำแนะนำสั้น ๆ สำหรับวิธีรับ Client ID ฟรีจาก Google Cloud Console (ถ้าผู้ใช้อยากใช้ Client ID ตัวเอง)
+
+---
+
+### 🧪 การทดสอบ & ยืนยัน
+- ทดสอบสร้างโปรเจกต์ → บันทึกลง Google Drive
+- ทดสอบเปิดรายการงานใน Google Drive → ดึงไฟล์กลับมาแก้ไขในแคนวาส
+- ทดสอบ `pnpm build` ผ่านเรียบร้อย และ Push ขึ้น Vercel deployment

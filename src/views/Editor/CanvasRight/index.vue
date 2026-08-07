@@ -5,6 +5,21 @@
         <Lang />
       </div>
       <div class="flex items-center">
+        <el-dropdown trigger="click" class="mr-1">
+          <el-button type="success" plain size="small">
+            ☁️ Drive <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item @click="handleSaveToDrive">
+                💾 บันทึกไปที่ Google Drive
+              </el-dropdown-item>
+              <el-dropdown-item @click="openDriveModal">
+                📂 เปิดงานจาก Google Drive
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <el-button text>{{ t('message.share') }}</el-button>
         <el-button type="primary" @click="exportFile">{{ t('message.download') }}</el-button>
         <el-button text href="https://github.com/dromara/yft-design" tag="a" target="_blank" rel="noopener noreferrer">
@@ -33,6 +48,7 @@
       </div>
     </div>
     <FileExport v-model:visible="exportFileDialog" @close="exportFileHide" @save="exportFileHandle" />
+    <GoogleDriveModal :visible="driveModalVisible" @close="driveModalVisible = false" @opened="handleDriveOpened" />
   </div>
 </template>
 <script lang="ts" setup>
@@ -45,12 +61,79 @@ import CanvasStylePanel from "./CanvasStylePanel/index.vue";
 import ElemnetStylePanel from "./ElementStylePanel/index.vue";
 import EffectStylePanel from "./EffectStylePanel/index.vue";
 import LayerStylePanel from "./LayerStylePanel/index.vue";
-import useI18n from "@/hooks/useI18n";
+import { ArrowDown } from "@element-plus/icons-vue";
+import { ElMessage, ElMessageBox, ElLoading } from "element-plus";
+import GoogleDriveModal from "@/components/GoogleDriveModal/index.vue";
+import { saveProjectToDrive } from "@/utils/googleDrive";
+import { useTemplatesStore } from "@/store";
+import useCanvas from "@/views/Canvas/useCanvas";
+
 const { t } = useI18n();
 
 const mainStore = useMainStore();
+const templatesStore = useTemplatesStore();
 const { canvasObject, rightState } = storeToRefs(mainStore);
-const exportFileDialog = ref(false)
+const exportFileDialog = ref(false);
+const driveModalVisible = ref(false);
+const currentDriveFileId = ref<string | undefined>(undefined);
+const currentProjectName = ref<string>("งานวอลเลย์บอล");
+
+const openDriveModal = () => {
+  driveModalVisible.value = true;
+};
+
+const handleDriveOpened = (fileId: string, fileName: string) => {
+  currentDriveFileId.value = fileId;
+  currentProjectName.value = fileName;
+};
+
+const handleSaveToDrive = async () => {
+  const [canvas] = useCanvas();
+  
+  try {
+    const { value: inputName } = await ElMessageBox.prompt(
+      'กรุณาตั้งชื่อไฟล์สำหรับบันทึกไปที่ Google Drive',
+      'บันทึกไปที่ Google Drive',
+      {
+        confirmButtonText: 'บันทึก',
+        cancelButtonText: 'ยกเลิก',
+        inputValue: currentProjectName.value,
+        inputPattern: /\S+/,
+        inputErrorMessage: 'กรุณาใส่ชื่อไฟล์',
+      }
+    );
+
+    const name = inputName.trim();
+    currentProjectName.value = name;
+
+    const loadingInstance = ElLoading.service({
+      fullscreen: true,
+      text: 'กำลังบันทึกงานไปที่ Google Drive...',
+      background: 'rgba(0, 0, 0, 0.6)',
+    });
+
+    try {
+      const thumbnailDataUrl = canvas.toDataURL({ format: 'png', quality: 0.5, multiplier: 0.25 });
+      const currentTemplate = JSON.parse(JSON.stringify(templatesStore.currentTemplate));
+      
+      const res = await saveProjectToDrive(
+        currentTemplate,
+        name,
+        thumbnailDataUrl,
+        currentDriveFileId.value
+      );
+
+      currentDriveFileId.value = res.fileId;
+      ElMessage.success(`บันทึกงาน "${res.name}" ไปที่ Google Drive สำเร็จ!`);
+    } finally {
+      loadingInstance.close();
+    }
+  } catch (err: any) {
+    if (err !== 'cancel') {
+      ElMessage.error(err.message || 'ไม่สามารถบันทึกไปที่ Google Drive ได้');
+    }
+  }
+};
 
 
 const exportFileHide = () => {
