@@ -9,7 +9,7 @@ import { Template } from '@/types/canvas'
 
 const TOKEN_KEY = 'YFT_GOOGLE_DRIVE_TOKEN'
 const TOKEN_EXPIRE_KEY = 'YFT_GOOGLE_DRIVE_TOKEN_EXPIRE'
-const DEFAULT_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1048682855141-8qhk3p5u8psh7l3e67m2k5i3l1d8g7e9.apps.googleusercontent.com'
+const DEFAULT_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '95584897723-00nkagcchqv4pird98q95bo9dh6ara56.apps.googleusercontent.com'
 const DRIVE_FOLDER_NAME = 'Volleyball Design Projects'
 const SCOPES = 'https://www.googleapis.com/auth/drive.file'
 
