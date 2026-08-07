@@ -176,7 +176,7 @@ export const saveProjectToDrive = async (
 
   const fileName = `${projectName || 'งานออกแบบที่ไม่ระบุชื่อ'}.json`
   
-  // แนบรูปพรีวิวลงในโครงสร้าง template ถ้ามี
+  // แนบรูปพรีวิวลงในโครงสร้าง template
   const payload = {
     ...template,
     _previewThumbnail: thumbnailDataUrl || '',
@@ -234,7 +234,7 @@ export const saveProjectToDrive = async (
 }
 
 /**
- * ดึงรายการไฟล์โปรเจกต์ทั้งหมดที่เก็บไว้ใน Google Drive
+ * ดึงรายการไฟล์โปรเจกต์ทั้งหมดที่เก็บไว้ใน Google Drive พร้อมอ่านรูปพรีวิวตัวอย่างงาน
  */
 export const listDriveProjects = async (clientId?: string): Promise<DriveProject[]> => {
   const token = await getAccessToken(clientId)
@@ -254,13 +254,35 @@ export const listDriveProjects = async (clientId?: string): Promise<DriveProject
   }
 
   const data = await res.json()
-  return (data.files || []).map((file: any) => ({
-    id: file.id,
-    name: file.name.replace(/\.json$/, ''),
-    modifiedTime: new Date(file.modifiedTime).toLocaleString('th-TH'),
-    thumbnailUrl: file.thumbnailLink || '',
-    size: file.size ? `${(file.size / 1024).toFixed(1)} KB` : 'N/A',
-  }))
+  const files = data.files || []
+
+  // อ่านรูปพรีวิว _previewThumbnail จากเนื้อหาไฟล์แบบขนาน (Parallel)
+  const projects = await Promise.all(
+    files.map(async (file: any) => {
+      let thumbnailUrl = file.thumbnailLink || ''
+      try {
+        const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (fileRes.ok) {
+          const json = await fileRes.json()
+          if (json._previewThumbnail) {
+            thumbnailUrl = json._previewThumbnail
+          }
+        }
+      } catch (e) {}
+
+      return {
+        id: file.id,
+        name: file.name.replace(/\.json$/, ''),
+        modifiedTime: new Date(file.modifiedTime).toLocaleString('th-TH'),
+        thumbnailUrl,
+        size: file.size ? `${(file.size / 1024).toFixed(1)} KB` : 'N/A',
+      }
+    })
+  )
+
+  return projects
 }
 
 /**
