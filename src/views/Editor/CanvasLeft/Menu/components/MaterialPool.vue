@@ -125,7 +125,7 @@ const drawMaterial = async (files: File[]) => {
   width: 100%;
 }
 .material-tab .el-tabs__content {
-  height: 100vh;
+  height: 100%;
   overflow-y: scroll;
 }
 </style>

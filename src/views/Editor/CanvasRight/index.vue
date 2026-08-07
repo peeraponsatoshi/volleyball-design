@@ -109,12 +109,15 @@ const currentPanelComponent = computed(() => {
 .right-top {
   height: 40px;
   width: 100%;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   border-bottom: 1px solid $borderColor;
 }
 .right-bottom {
-  height: calc(100% - 40px);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 .right-tabs {
   height: 32px;
@@ -147,6 +150,7 @@ const currentPanelComponent = computed(() => {
   overflow-y: scroll;
   overflow-x: hidden;
   height: 100%;
+  min-height: 0;
   // @include overflow-overlay();
 }
 </style>

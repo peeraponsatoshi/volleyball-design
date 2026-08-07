@@ -79,8 +79,8 @@ const insertPlayer = (p: Player) => {
 <style lang="scss" scoped>
 .vb-pool {
   padding: 12px 10px 40px;
-  height: calc(100vh - 120px);
-  overflow: auto;
+  height: 100%;
+  overflow-y: auto;
 }
 .section-title {
   font-size: 13px;

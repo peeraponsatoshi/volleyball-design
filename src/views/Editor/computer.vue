@@ -11,7 +11,7 @@
     <div class="layout-content flex">
       <CanvasLeft />
       <div class="layout-content-center">
-        <CanvasHeader class="center-header relative flex justify-between py-[10px] text-[14px] select-none h-[39px]" />
+        <CanvasHeader class="center-header relative flex justify-between items-center text-[14px] select-none h-[40px] px-[10px]" />
         <CanvasCenter class="center-body" />
         <CanvasAffix  class="center-affix"/>
         <CanvasICP />
@@ -41,9 +41,13 @@ import CanvasTour from "./CanvasTour/index.vue";
 }
 .layout-content-center {
   width: calc(100% - 50px - 160px - 260px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 
   .center-body {
-    height: 100%;
+    flex: 1;
+    min-height: 0;
     // margin: 100px;
   }
   .center-footer {

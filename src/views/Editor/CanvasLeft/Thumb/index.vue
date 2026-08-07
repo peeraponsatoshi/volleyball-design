@@ -267,7 +267,8 @@ const changeSlideIndex = (index: number) => {
   }
 }
 .thumb-number {
-  height: 0;
+  height: 40px;
+  flex-shrink: 0;
   font-size: 12px;
   border-top: 1px solid $borderColor;
   line-height: 40px;

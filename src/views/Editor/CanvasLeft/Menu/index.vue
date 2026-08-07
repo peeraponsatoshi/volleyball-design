@@ -61,16 +61,19 @@ const leftToggle = () => {
   width: 300px;
   left: 50px;
   top: 40px;
-  z-index: 1;
+  height: calc(100vh - 40px);
+  z-index: 15;
   background: #fff;
   border-left: 1px solid $borderColor;
   border-right: 1px solid $borderColor;
   border-bottom: 1px solid $borderColor;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .12);
   transition: left 0.5s linear, right 0.5s linear;
 }
 .menu-pool {
   width: 300px;
-  height: 100vh;
+  height: 100%;
+  overflow-y: auto;
   transition: left .3s linear;
   border-bottom: 1px solid $borderColor;
 }
@@ -80,6 +83,7 @@ const leftToggle = () => {
   top: calc(50% + 40px);
   transform: translateY(-50%);
   position: absolute;;
+  box-shadow: none;
   // z-index: 1;
 }
 .layout-toggle {
