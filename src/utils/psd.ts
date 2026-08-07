@@ -1,4 +1,4 @@
-import { readPsd } from 'ag-psd'
+import { readPsd, getLayerMaskCanvas } from 'ag-psd'
 import { nanoid } from 'nanoid'
 import { Template } from '@/types/canvas'
 import { WorkSpaceDrawData, propertiesToInclude } from '@/configs/canvas'
@@ -6,8 +6,6 @@ import { Image as FabricImage } from '@/extension/object/Image'
 
 /**
  * แปลง BlendMode ของ Photoshop เป็น globalCompositeOperation ของ fabric.
- * canvas 2D (GlobalCompositeOperation) และ propertiesToInclude (src/configs/canvas.ts)
- * รองรับชื่อโหมดเหล่านี้อยู่แล้ว ส่วนที่ map ไม่ได้ให้ใช้ 'source-over' (ปกติ)
  */
 const BLEND_MODE_MAP: Record<string, string> = {
   normal: 'source-over',
@@ -33,58 +31,181 @@ const toGlobalCompositeOperation = (blendMode?: string) =>
   BLEND_MODE_MAP[blendMode || 'normal'] || 'source-over'
 
 /**
- * แปลงเลเยอร์หนึ่ง ๆ ให้เป็น object fabric Image ที่ผ่า `canvas.loadFromJSON` ได้
- * โดยใช้คลาส Image ของตัวแก้ไขเอง + `.toObject(propertiesToInclude)` (ช่องเดียวกับตอนเซฟ)
- * - layer ที่ซ่อน: ข้าม
- * - โฟลเดอร์/กลุ่ม: ลงลึกใน children (เรียงตาม z-order เดิม bottom-to-top)
- * - เลเยอร์ที่ไม่มีข้อมูลภาพ (เช่น adjustment layer, empty group): ข้าม
+ * แปลง Layer Mask ของ Photoshop (ที่เป็น Grayscale RGB) ให้กลายเป็น Alpha Channel Mask
+ * (255/สีขาว = แสดงผลทึบแสง, 0/สีดำ = โปร่งใส)
  */
-const layerToObject = async (layer: any): Promise<Record<string, any>[]> => {
-  if (layer.hidden) return []
+const convertGrayscaleToAlphaMask = (maskCanvas: HTMLCanvasElement): HTMLCanvasElement => {
+  const width = maskCanvas.width
+  const height = maskCanvas.height
+  const alphaCanvas = document.createElement('canvas')
+  alphaCanvas.width = width
+  alphaCanvas.height = height
+  const alphaCtx = alphaCanvas.getContext('2d')
+  if (!alphaCtx) return maskCanvas
 
-  if (layer.children && layer.children.length) {
-    const objects: Record<string, any>[] = []
-    for (const child of layer.children) {
-      objects.push(...(await layerToObject(child)))
-    }
-    return objects
+  const maskCtx = maskCanvas.getContext('2d')
+  if (!maskCtx) return maskCanvas
+
+  const imgData = maskCtx.getImageData(0, 0, width, height)
+  const data = imgData.data
+
+  // แปลงค่าความสว่างของ RGB ให้กลายเป็น Alpha channel
+  for (let i = 0; i < data.length; i += 4) {
+    const intensity = data[i] // สีขาว=255, สีดำ=0
+    data[i + 3] = intensity
   }
 
-  const canvas = layer.canvas
-  if (!canvas) return []
+  alphaCtx.putImageData(imgData, 0, 0)
+  return alphaCanvas
+}
 
-  const src = canvas.toDataURL('image/png')
-  const img = await FabricImage.fromURL(
-    src,
-    {},
-    {
-      crossOrigin: 'anonymous',
-      originX: 'left',
-      originY: 'top',
-      left: layer.left || 0,
-      top: layer.top || 0,
-      angle: 0,
-      opacity: 1,
-      id: nanoid(10),
-      name: layer.name || 'Image',
-      layer: layer.name || 'Image',
-    },
-  )
-  img.set({
-    opacity: layer.opacity ?? 1,
-    globalCompositeOperation: toGlobalCompositeOperation(layer.blendMode),
-  })
-  return [img.toObject(propertiesToInclude)]
+/**
+ * ตัดขอบ/เจาะรูรูปภาพของเลเยอร์ด้วย Layer Mask (ถ้ามี)
+ */
+const applyLayerMask = (layer: any, layerCanvas: HTMLCanvasElement): HTMLCanvasElement => {
+  const mask = layer.mask
+  if (!mask || mask.disabled) return layerCanvas
+
+  // ดึง Canvas ของ Mask (ผ่าน getLayerMaskCanvas หรือ layer.mask.canvas)
+  const rawMaskCv = getLayerMaskCanvas(layer) || mask.canvas
+  if (!rawMaskCv || !rawMaskCv.width || !rawMaskCv.height) return layerCanvas
+
+  const layerW = layerCanvas.width
+  const layerH = layerCanvas.height
+  if (!layerW || !layerH) return layerCanvas
+
+  // สร้าง Canvas ใหม่เพื่อทำการรวม Mask เข้ากับรูปภาพ
+  const maskedCanvas = document.createElement('canvas')
+  maskedCanvas.width = layerW
+  maskedCanvas.height = layerH
+  const ctx = maskedCanvas.getContext('2d')
+  if (!ctx) return layerCanvas
+
+  // วาดรูปภาพเดิม
+  ctx.drawImage(layerCanvas, 0, 0)
+
+  // แปลง Mask เป็น Alpha Mask
+  const alphaMaskCv = convertGrayscaleToAlphaMask(rawMaskCv)
+
+  // คำนวณตำแหน่ง Mask เทียบกับตัวเลเยอร์
+  const layerLeft = layer.left || 0
+  const layerTop = layer.top || 0
+  const maskLeft = mask.left ?? layerLeft
+  const maskTop = mask.top ?? layerTop
+  const offsetX = maskLeft - layerLeft
+  const offsetY = maskTop - layerTop
+
+  // ใช้ destination-in เพื่อตัดส่วนที่นอกเหนือจาก Mask ให้โปร่งใส
+  ctx.globalCompositeOperation = 'destination-in'
+  ctx.drawImage(alphaMaskCv, offsetX, offsetY)
+
+  return maskedCanvas
+}
+
+/**
+ * ตัดรูปภาพด้วย Clipping Mask (ตัดตามรูปร่าง/ความโปร่งใสของเลเยอร์ฐาน)
+ */
+const applyClippingMask = (
+  clipCanvas: HTMLCanvasElement,
+  clipLeft: number,
+  clipTop: number,
+  baseCanvas: HTMLCanvasElement,
+  baseLeft: number,
+  baseTop: number,
+): HTMLCanvasElement => {
+  const w = clipCanvas.width
+  const h = clipCanvas.height
+  if (!w || !h) return clipCanvas
+
+  const resultCanvas = document.createElement('canvas')
+  resultCanvas.width = w
+  resultCanvas.height = h
+  const ctx = resultCanvas.getContext('2d')
+  if (!ctx) return clipCanvas
+
+  // วาดรูปภาพของเลเยอร์ clipping
+  ctx.drawImage(clipCanvas, 0, 0)
+
+  // ตัดขอบด้วย alpha ของเลเยอร์ฐาน (base layer)
+  const offsetX = baseLeft - clipLeft
+  const offsetY = baseTop - clipTop
+  ctx.globalCompositeOperation = 'destination-in'
+  ctx.drawImage(baseCanvas, offsetX, offsetY)
+
+  return resultCanvas
+}
+
+interface ProcessedLayerInfo {
+  layer: any
+  canvas: HTMLCanvasElement
+  left: number
+  top: number
+}
+
+/**
+ * ประมวลผลเลเยอร์และโฟลเดอร์แบบ Recursive พร้อมจัดการ Layer Mask และ Clipping Mask
+ */
+const processLayerList = async (layerList: any[]): Promise<Record<string, any>[]> => {
+  const objects: Record<string, any>[] = []
+  let currentBase: ProcessedLayerInfo | null = null
+
+  for (const layer of layerList) {
+    if (layer.hidden) continue
+
+    // ถ้าเป็นโฟลเดอร์/กลุ่ม → ประมวลผลลูกข้างใน
+    if (layer.children && layer.children.length) {
+      const childObjs = await processLayerList(layer.children)
+      objects.push(...childObjs)
+      currentBase = null
+      continue
+    }
+
+    let cv = layer.canvas
+    if (!cv || !cv.width || !cv.height) continue
+
+    // 1. ประมวลผล Layer Mask (เจาะฉากหลังขาว/ตาม mask)
+    cv = applyLayerMask(layer, cv)
+
+    const left = layer.left || 0
+    const top = layer.top || 0
+
+    // 2. ประมวลผล Clipping Mask (ถ้าเลเยอร์นี้ใช้เลเยอร์ล่างเป็น clipping mask)
+    if (layer.clipping && currentBase) {
+      cv = applyClippingMask(cv, left, top, currentBase.canvas, currentBase.left, currentBase.top)
+    } else {
+      // อัปเดตเลเยอร์ฐานปัจจุบัน
+      currentBase = { layer, canvas: cv, left, top }
+    }
+
+    const src = cv.toDataURL('image/png')
+    const img = await FabricImage.fromURL(
+      src,
+      {},
+      {
+        crossOrigin: 'anonymous',
+        originX: 'left',
+        originY: 'top',
+        left,
+        top,
+        angle: 0,
+        opacity: 1,
+        id: nanoid(10),
+        name: layer.name || 'Image',
+        layer: layer.name || 'Image',
+      },
+    )
+    img.set({
+      opacity: layer.opacity ?? 1,
+      globalCompositeOperation: toGlobalCompositeOperation(layer.blendMode),
+    })
+    objects.push(img.toObject(propertiesToInclude))
+  }
+
+  return objects
 }
 
 /**
  * อ่านไฟล์ PSD ด้วย ag-psd และสร้าง Template ของตัวแก้ไข
- * (โครงสร้างเดียวกับ generateSVGTemplate ใน src/components/FileUpload/index.vue)
- *
- * หมายเหตุ:
- * - แต่ละเลเยอร์ถูกนำเข้าเป็น object รูปภาพ (text layer ก็เป็นภาพ รักษาความละเอียดต้นฉบับ)
- * - ตำแหน่ง Telaxer ใช้พิกเซลของเอกสารโดยตรง (Template width/height = psd.width/height, zoom=1)
- * - blend mode ของ group ขั้นสูง (layer mask ที่ไม่ใช่ flat) ได้ผลลัพธ์โดยประมาณจาก globalCompositeOperation
  */
 export const psdToTemplate = async (file: File): Promise<Template> => {
   const buffer = await file.arrayBuffer()
@@ -93,11 +214,8 @@ export const psdToTemplate = async (file: File): Promise<Template> => {
   WorkSpaceDrawData.width = psd.width
   WorkSpaceDrawData.height = psd.height
 
-  const objects: Record<string, any>[] = []
-  // children ของ PSD เรียงล่าง→บน (ตรงกับ z-order ของ fabric ที่ objects[0] อยู่ล่างสุด)
-  for (const layer of psd.children || []) {
-    objects.push(...(await layerToObject(layer)))
-  }
+  // ประมวลผลเลเยอร์ทั้งหมด (พร้อม layer mask + clipping mask)
+  const objects = await processLayerList(psd.children || [])
 
   const template: Template = {
     id: nanoid(10),
