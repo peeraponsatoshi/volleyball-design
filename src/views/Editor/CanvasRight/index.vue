@@ -67,6 +67,7 @@ import GoogleDriveModal from "@/components/GoogleDriveModal/index.vue";
 import { saveProjectToDrive } from "@/utils/googleDrive";
 import { useTemplatesStore } from "@/store";
 import useCanvas from "@/views/Canvas/useCanvas";
+import useI18n from "@/hooks/useI18n";
 
 const { t } = useI18n();
 
