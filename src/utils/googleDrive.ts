@@ -142,6 +142,90 @@ const getOrCreateAppFolder = async (accessToken: string): Promise<string> => {
 }
 
 /**
+ * แปลง Data URL เป็น Blob
+ */
+const dataURLtoBlob = (dataurl: string): Blob => {
+  const arr = dataurl.split(',')
+  const mimeMatch = arr[0].match(/:(.*?);/)
+  const mime = mimeMatch ? mimeMatch[1] : 'image/png'
+  const bstr = atob(arr[1])
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n)
+  }
+  return new Blob([u8arr], { type: mime })
+}
+
+/**
+ * บันทึกหรืออัปเดตรูป Thumbnail PNG แยกต่างหากใน Google Drive
+ */
+const saveThumbnailImage = async (
+  token: string,
+  folderId: string,
+  baseName: string,
+  thumbnailDataUrl: string,
+): Promise<void> => {
+  try {
+    const pngName = `${baseName}.png`
+    const query = `'${folderId}' in parents and name = '${pngName}' and trashed = false`
+    const searchRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    )
+    const searchData = await searchRes.json()
+    const existingPngId = searchData.files?.[0]?.id
+
+    const blob = dataURLtoBlob(thumbnailDataUrl)
+
+    if (existingPngId) {
+      // อัปเดตรูป PNG เดิม
+      await fetch(
+        `https://www.googleapis.com/upload/drive/v3/files/${existingPngId}?uploadType=media`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'image/png',
+          },
+          body: blob,
+        },
+      )
+    } else {
+      // สร้างรูป PNG ใหม่พร้อม Metadata
+      const metadata = {
+        name: pngName,
+        parents: [folderId],
+        mimeType: 'image/png',
+      }
+      const boundary = 'png_boundary_999'
+      const metaBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json' })
+      const multipartBlob = new Blob(
+        [
+          `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`,
+          metaBlob,
+          `\r\n--${boundary}\r\nContent-Type: image/png\r\n\r\n`,
+          blob,
+          `\r\n--${boundary}--`,
+        ],
+        { type: `multipart/related; boundary=${boundary}` },
+      )
+
+      await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: multipartBlob,
+        },
+      )
+    }
+  } catch (e) {
+    console.warn('ไม่สามารถเซฟรูปพรีวิว PNG แยกได้:', e)
+  }
+}
+
+/**
  * สร้าง Multipart Related Body เป็น Blob ตามมาตรฐาน Google Drive REST API
  */
 const createMultipartBlob = (metadata: object, jsonContent: string): Blob => {
@@ -152,13 +236,16 @@ const createMultipartBlob = (metadata: object, jsonContent: string): Blob => {
   const metaString = JSON.stringify(metadata)
   const contentString = jsonContent
 
-  return new Blob([
-    delimiter,
-    metaString,
-    `\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`,
-    contentString,
-    closeDelimiter
-  ], { type: `multipart/related; boundary=${boundary}` })
+  return new Blob(
+    [
+      delimiter,
+      metaString,
+      `\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`,
+      contentString,
+      closeDelimiter,
+    ],
+    { type: `multipart/related; boundary=${boundary}` },
+  )
 }
 
 /**
@@ -174,20 +261,17 @@ export const saveProjectToDrive = async (
   const token = await getAccessToken(clientId)
   const folderId = await getOrCreateAppFolder(token)
 
-  const fileName = `${projectName || 'งานออกแบบที่ไม่ระบุชื่อ'}.json`
-  
-  // แนบรูปพรีวิวลงในโครงสร้าง template
-  const payload = {
-    ...template,
-    _previewThumbnail: thumbnailDataUrl || '',
-  }
-  const fileContent = JSON.stringify(payload)
+  const cleanName = projectName || 'งานออกแบบที่ไม่ระบุชื่อ'
+  const fileName = `${cleanName}.json`
+  const fileContent = JSON.stringify(template)
 
   const metadata: any = {
     name: fileName,
     mimeType: 'application/json',
     description: 'Volleyball Design Editor Project File',
   }
+
+  let resultFileId = existingFileId
 
   // อัปเดตไฟล์เดิม
   if (existingFileId) {
@@ -196,9 +280,7 @@ export const saveProjectToDrive = async (
 
     const res = await fetch(updateUrl, {
       method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
       body: bodyBlob,
     })
 
@@ -208,29 +290,34 @@ export const saveProjectToDrive = async (
     }
 
     const data = await res.json()
-    return { fileId: data.id, name: data.name }
+    resultFileId = data.id
+  } else {
+    // สร้างไฟล์ใหม่
+    metadata.parents = [folderId]
+    const uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart'
+    const bodyBlob = createMultipartBlob(metadata, fileContent)
+
+    const res = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: bodyBlob,
+    })
+
+    if (!res.ok) {
+      const err = await res.json()
+      throw new Error(err.error?.message || 'ไม่สามารถบันทึกไฟล์ไปที่ Google Drive ได้')
+    }
+
+    const data = await res.json()
+    resultFileId = data.id
   }
 
-  // สร้างไฟล์ใหม่
-  metadata.parents = [folderId]
-  const uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart'
-  const bodyBlob = createMultipartBlob(metadata, fileContent)
-
-  const res = await fetch(uploadUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: bodyBlob,
-  })
-
-  if (!res.ok) {
-    const err = await res.json()
-    throw new Error(err.error?.message || 'ไม่สามารถบันทึกไฟล์ไปที่ Google Drive ได้')
+  // เซฟรูป PNG พรีวิวแยกไว้คู่กับไฟล์ JSON เพื่อการแสดงผลที่เร็วและแน่นอน 100%
+  if (thumbnailDataUrl) {
+    await saveThumbnailImage(token, folderId, cleanName, thumbnailDataUrl)
   }
 
-  const data = await res.json()
-  return { fileId: data.id, name: data.name }
+  return { fileId: resultFileId, name: cleanName }
 }
 
 /**
@@ -240,8 +327,9 @@ export const listDriveProjects = async (clientId?: string): Promise<DriveProject
   const token = await getAccessToken(clientId)
   const folderId = await getOrCreateAppFolder(token)
 
-  const query = `'${folderId}' in parents and trashed = false and (name contains '.json' or mimeType = 'application/json')`
-  const fields = 'files(id, name, modifiedTime, size, thumbnailLink)'
+  // ดึงทั้งไฟล์ .json และไฟล์ .png ในโฟลเดอร์เดียวกัน
+  const query = `'${folderId}' in parents and trashed = false`
+  const fields = 'files(id, name, modifiedTime, size, mimeType)'
   const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent(fields)}&orderBy=modifiedTime desc`
 
   const res = await fetch(url, {
@@ -254,32 +342,44 @@ export const listDriveProjects = async (clientId?: string): Promise<DriveProject
   }
 
   const data = await res.json()
-  const files = data.files || []
+  const allFiles: any[] = data.files || []
 
-  // อ่านรูปพรีวิว _previewThumbnail จากเนื้อหาไฟล์แบบขนาน (Parallel)
+  const jsonFiles = allFiles.filter(
+    f => f.name.endsWith('.json') || f.mimeType === 'application/json',
+  )
+  const pngFiles = allFiles.filter(
+    f => f.name.endsWith('.png') || f.mimeType === 'image/png',
+  )
+
+  // จับคู่ไฟล์ .json กับ .png ที่ชื่อเดียวกัน
   const projects = await Promise.all(
-    files.map(async (file: any) => {
-      let thumbnailUrl = file.thumbnailLink || ''
-      try {
-        const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (fileRes.ok) {
-          const json = await fileRes.json()
-          if (json._previewThumbnail) {
-            thumbnailUrl = json._previewThumbnail
+    jsonFiles.map(async file => {
+      const baseName = file.name.replace(/\.json$/, '')
+      const matchingPng = pngFiles.find(p => p.name === `${baseName}.png`)
+
+      let thumbnailUrl = ''
+
+      if (matchingPng) {
+        try {
+          const imgRes = await fetch(
+            `https://www.googleapis.com/drive/v3/files/${matchingPng.id}?alt=media`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          )
+          if (imgRes.ok) {
+            const blob = await imgRes.blob()
+            thumbnailUrl = URL.createObjectURL(blob)
           }
-        }
-      } catch (e) {}
+        } catch (e) {}
+      }
 
       return {
         id: file.id,
-        name: file.name.replace(/\.json$/, ''),
+        name: baseName,
         modifiedTime: new Date(file.modifiedTime).toLocaleString('th-TH'),
         thumbnailUrl,
         size: file.size ? `${(file.size / 1024).toFixed(1)} KB` : 'N/A',
       }
-    })
+    }),
   )
 
   return projects
@@ -309,12 +409,44 @@ export const loadDriveProject = async (fileId: string, clientId?: string): Promi
 }
 
 /**
- * ลบไฟล์โปรเจกต์ออกจาก Google Drive
+ * ลบไฟล์โปรเจกต์ออกจาก Google Drive (ลบทั้ง .json และ .png คู่กัน)
  */
 export const deleteDriveProject = async (fileId: string, clientId?: string): Promise<void> => {
   const token = await getAccessToken(clientId)
-  const url = `https://www.googleapis.com/drive/v3/files/${fileId}`
 
+  // อ่านชื่อไฟล์เดิมก่อนลบ เพื่อหาไฟล์ .png ที่คู่กัน
+  let baseName = ''
+  try {
+    const getRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=name,parents`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (getRes.ok) {
+      const info = await getRes.json()
+      baseName = info.name.replace(/\.json$/, '')
+      const folderId = info.parents?.[0]
+
+      if (folderId && baseName) {
+        // ค้นหาไฟล์ .png
+        const pngQuery = `'${folderId}' in parents and name = '${baseName}.png' and trashed = false`
+        const pngRes = await fetch(
+          `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(pngQuery)}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        )
+        if (pngRes.ok) {
+          const pngData = await pngRes.json()
+          if (pngData.files?.[0]?.id) {
+            await fetch(`https://www.googleapis.com/drive/v3/files/${pngData.files[0].id}`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${token}` },
+            })
+          }
+        }
+      }
+    }
+  } catch (e) {}
+
+  // ลบไฟล์ .json หลัก
+  const url = `https://www.googleapis.com/drive/v3/files/${fileId}`
   const res = await fetch(url, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
