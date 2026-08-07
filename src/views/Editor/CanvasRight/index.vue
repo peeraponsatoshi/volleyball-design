@@ -5,29 +5,8 @@
         <Lang />
       </div>
       <div class="flex items-center">
-        <el-dropdown trigger="click" class="mr-1">
-          <el-button type="success" plain size="small">
-            ☁️ Drive <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-          </el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item @click="handleSaveToDrive">
-                💾 บันทึกไปที่ Google Drive
-              </el-dropdown-item>
-              <el-dropdown-item @click="openDriveModal">
-                📂 เปิดงานจาก Google Drive
-              </el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-        <el-button text>{{ t('message.share') }}</el-button>
-        <el-button type="primary" @click="exportFile">{{ t('message.download') }}</el-button>
         <el-button text href="https://github.com/dromara/yft-design" tag="a" target="_blank" rel="noopener noreferrer">
-          <!-- <a href="https://github.com/dromara/yft-design" target="_blank" rel="noopener noreferrer"> -->
-            <!-- <el-tooltip placement="top" :hide-after="0" :content="t('message.github')"> -->
-            <IconGithub class="footer-button"></IconGithub>
-            <!-- </el-tooltip> -->
-          <!-- </a> -->
+          <IconGithub class="footer-button"></IconGithub>
         </el-button>
       </div>
     </div>

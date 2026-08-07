@@ -16,7 +16,7 @@
         <CanvasAffix  class="center-affix"/>
         <CanvasICP />
       </div>
-      <CanvasRight class="layout-content-right h-full w-[260px] bg-[#fff] flex flex-col" />
+      <CanvasRight class="layout-content-right h-full w-[260px] min-w-[260px] max-w-[260px] bg-[#fff] flex flex-col flex-shrink-0" />
       <CanvasDom class="absolute -z-[200] -left-[300px]" />
     </div>
     <CanvasTour />
@@ -40,7 +40,8 @@ import CanvasTour from "./CanvasTour/index.vue";
   height: calc(100% - 40px);
 }
 .layout-content-center {
-  width: calc(100% - 50px - 160px - 260px);
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
