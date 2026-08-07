@@ -55,12 +55,39 @@
         </div>
       </el-popover>
       <IconPlus class="handler-item" @click="scaleCanvas('+')" />
-      <!-- <el-tooltip placement="top">
-        <template #content>{{ t("message.undo") }}</template>
-        <IconFullScreen class="handler-item" @click="resetCanvas()" />
-      </el-tooltip> -->
-      <!-- <Lang /> -->
+
+      <!-- Google Drive & Action Buttons -->
+      <div class="flex items-center ml-3">
+        <el-dropdown trigger="click" class="mr-2">
+          <el-button type="success" size="small" plain>
+            ☁️ Drive <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item @click="handleSaveToDrive">
+                💾 บันทึกไปที่ Google Drive
+              </el-dropdown-item>
+              <el-dropdown-item @click="openDriveModal">
+                📂 เปิดงานจาก Google Drive
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+
+        <el-button type="primary" size="small" class="mr-2" @click="exportFile">
+          ดาวน์โหลด
+        </el-button>
+
+        <el-button size="small" @click="openUploadDialog">
+          นำเข้าไฟล์
+        </el-button>
+      </div>
     </div>
+
+    <!-- Modals -->
+    <FileExport v-model:visible="exportFileDialog" @close="exportFileDialog = false" @save="exportFileDialog = false" />
+    <FileUpload :visible="uploadFileDialog" @close="uploadFileDialog = false" />
+    <GoogleDriveModal :visible="driveModalVisible" @close="driveModalVisible = false" @opened="handleDriveOpened" />
   </div>
 </template>
 
@@ -78,6 +105,13 @@ import useCanvasScale from "@/hooks/useCanvasScale";
 import useHandleElement from "@/hooks/useHandleElement";
 import useHistorySnapshot from "@/hooks/useHistorySnapshot";
 
+import { ArrowDown } from "@element-plus/icons-vue";
+import { ElMessage, ElMessageBox, ElLoading } from "element-plus";
+import FileExport from "@/components/FileExport/index.vue";
+import FileUpload from "@/components/FileUpload/index.vue";
+import GoogleDriveModal from "@/components/GoogleDriveModal/index.vue";
+import { saveProjectToDrive } from "@/utils/googleDrive";
+
 const fabricStore = useFabricStore();
 const mainStore = useMainStore();
 const templatesStore = useTemplatesStore();
@@ -85,6 +119,77 @@ const { t } = useI18n();
 const { alignElement, layerElement } = useHandleTool();
 const { setCanvasScalePercentage, scaleCanvas, resetCanvas } = useCanvasScale();
 const { combineElements, uncombineElements, intersectElements } = useHandleElement();
+
+const exportFileDialog = ref(false);
+const uploadFileDialog = ref(false);
+const driveModalVisible = ref(false);
+const currentDriveFileId = ref<string | undefined>(undefined);
+const currentProjectName = ref<string>("งานวอลเลย์บอล");
+
+const exportFile = () => {
+  exportFileDialog.value = true;
+};
+
+const openUploadDialog = () => {
+  uploadFileDialog.value = true;
+};
+
+const openDriveModal = () => {
+  driveModalVisible.value = true;
+};
+
+const handleDriveOpened = (fileId: string, fileName: string) => {
+  currentDriveFileId.value = fileId;
+  currentProjectName.value = fileName;
+};
+
+const handleSaveToDrive = async () => {
+  const [canvas] = useCanvas();
+  
+  try {
+    const { value: inputName } = await ElMessageBox.prompt(
+      'กรุณาตั้งชื่อไฟล์สำหรับบันทึกไปที่ Google Drive',
+      'บันทึกไปที่ Google Drive',
+      {
+        confirmButtonText: 'บันทึก',
+        cancelButtonText: 'ยกเลิก',
+        inputValue: currentProjectName.value,
+        inputPattern: /\S+/,
+        inputErrorMessage: 'กรุณาใส่ชื่อไฟล์',
+      }
+    );
+
+    const name = inputName.trim();
+    currentProjectName.value = name;
+
+    const loadingInstance = ElLoading.service({
+      fullscreen: true,
+      text: 'กำลังบันทึกงานไปที่ Google Drive...',
+      background: 'rgba(0, 0, 0, 0.6)',
+    });
+
+    try {
+      const thumbnailDataUrl = canvas.toDataURL({ format: 'png', quality: 0.5, multiplier: 0.25 });
+      const currentTemplate = JSON.parse(JSON.stringify(templatesStore.currentTemplate));
+      
+      const res = await saveProjectToDrive(
+        currentTemplate,
+        name,
+        thumbnailDataUrl,
+        currentDriveFileId.value
+      );
+
+      currentDriveFileId.value = res.fileId;
+      ElMessage.success(`บันทึกงาน "${res.name}" ไปที่ Google Drive สำเร็จ!`);
+    } finally {
+      loadingInstance.close();
+    }
+  } catch (err: any) {
+    if (err !== 'cancel') {
+      ElMessage.error(err.message || 'ไม่สามารถบันทึกไปที่ Google Drive ได้');
+    }
+  }
+};
 const { zoom } = storeToRefs(fabricStore);
 const { canvasObject } = storeToRefs(mainStore);
 

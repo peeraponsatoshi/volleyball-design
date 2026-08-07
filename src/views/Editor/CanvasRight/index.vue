@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="h-full flex flex-col w-full">
     <div class="right-top">
       <div class="flex align-middle px-[8px]">
         <Lang />
