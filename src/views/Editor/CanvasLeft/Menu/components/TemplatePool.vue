@@ -28,7 +28,7 @@
       </el-tab-pane>
 
       <!-- แท็บงานของฉัน (ซิงก์กับ Google Drive) -->
-      <el-tab-pane label="☁️ งานใน Google Drive" name="self">
+      <el-tab-pane :label="$t('message.myTemp') + ' (Drive)'" name="self">
         <div class="my-drive-container" v-loading="loadingDrive">
           <div class="flex justify-between items-center mb-2 px-1">
             <span class="text-xs text-gray-500">งานที่คุณบันทึกไว้ใน Google Drive</span>
@@ -140,6 +140,12 @@ const handleTabChange = (tabName: any) => {
     fetchDriveProjects()
   }
 }
+
+onMounted(() => {
+  if (activeTab.value === 'self') {
+    fetchDriveProjects()
+  }
+})
 
 const fetchDriveProjects = async () => {
   loadingDrive.value = true
