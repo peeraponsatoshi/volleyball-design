@@ -4,7 +4,7 @@
       <div class="flex align-middle px-[8px]">
         <Lang />
       </div>
-      <div>
+      <div class="flex items-center">
         <el-button text>{{ t('message.share') }}</el-button>
         <el-button type="primary" @click="exportFile">{{ t('message.download') }}</el-button>
         <el-button text href="https://github.com/dromara/yft-design" tag="a" target="_blank" rel="noopener noreferrer">
@@ -112,7 +112,13 @@ const currentPanelComponent = computed(() => {
   flex-shrink: 0;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
   border-bottom: 1px solid $borderColor;
+}
+.right-top .el-button {
+  height: 32px;
+  margin: 0;
 }
 .right-bottom {
   flex: 1;

@@ -62,7 +62,7 @@ const leftToggle = () => {
   left: 50px;
   top: 40px;
   height: calc(100vh - 40px);
-  z-index: 15;
+  z-index: 1;
   background: #fff;
   border-left: 1px solid $borderColor;
   border-right: 1px solid $borderColor;
