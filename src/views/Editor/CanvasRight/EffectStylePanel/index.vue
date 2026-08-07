@@ -2,14 +2,14 @@
   <div class="canvas-design-panel">
     <div>
       <el-button @click="handleReturn">
-        <b><IconLeft/>返回</b>
+        <b><IconLeft/>กลับ</b>
       </el-button>
     </div>
     <el-row>
 
     </el-row>
     <el-row class="row-info">
-      <el-col :span="12"><b>填充·描边</b></el-col>
+      <el-col :span="12"><b>เติมสี · เส้นขอบ</b></el-col>
       <el-col :span="12">
         <el-row class="info-handler">
           <el-col :span="6" class="handler-item" @click="addStroke">
@@ -22,7 +22,7 @@
       <el-row>
         <el-col :span="12" class="effect-layer">
           <IconHamburgerButton class="layer-icon"/>
-          层{{ index }}
+          ชั้น {{ index }}
         </el-col>
         <el-col :span="12">
           <el-row class="effect-handler">
@@ -41,7 +41,7 @@
       </el-row>
       <el-row class="effect-style">
         <el-col :span="6">
-          <el-checkbox v-model="item.isFill">填充</el-checkbox>
+          <el-checkbox v-model="item.isFill">เติมสี</el-checkbox>
         </el-col>
         <el-col :span="6">
           <el-popover trigger="click" placement="bottom" :width="265">
@@ -54,7 +54,7 @@
       </el-row>
       <el-row class="effect-style">
         <el-col :span="6">
-          <el-checkbox v-model="item.isStroke">描边</el-checkbox>
+          <el-checkbox v-model="item.isStroke">เส้นขอบ</el-checkbox>
         </el-col>
         <el-col :span="18">
           <el-row class="style-row">
@@ -81,7 +81,7 @@
       </el-row>
       <el-row class="effect-style">
         <el-col :span="6">
-          <el-checkbox v-model="item.isSkew">偏移</el-checkbox>
+          <el-checkbox v-model="item.isSkew">เลื่อนตำแหน่ง</el-checkbox>
         </el-col>
         <el-col :span="18">
           <el-row class="style-row">
@@ -96,7 +96,7 @@
       </el-row>
     </el-row>
     <el-row class="row-info">
-      <el-col :span="12"><b>投影</b></el-col>
+      <el-col :span="12"><b>เงา</b></el-col>
       <el-col :span="12">
         <el-row class="info-handler">
           <el-col :span="6" class="handler-item" @click="addShadow">
@@ -115,7 +115,7 @@
             <el-col :span="4">
               <IconContrastViewCircle class="layer-icon icon-size" />
             </el-col>
-            <el-col :span="16">基础投影</el-col>
+            <el-col :span="16">เงาพื้นฐาน</el-col>
           </el-row>
         </el-col>
         <el-col :span="12">

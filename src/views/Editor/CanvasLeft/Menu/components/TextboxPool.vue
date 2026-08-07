@@ -30,7 +30,7 @@
     <el-tabs v-model="activeTemplate" class="layout-tabs">
       <el-tab-pane :label="t('message.recommendText')" name="data">{{t("message.recommendText")}}</el-tab-pane>
       <el-tab-pane :label="t('message.myBookmarksText')" name="self">{{t("message.myTemplate")}}</el-tab-pane>
-      <el-tab-pane :label="t('message.myPurchasesText')" name="team">{{t("message.TeamTemplate")}}</el-tab-pane>
+      <el-tab-pane :label="t('message.myPurchasesText')" name="team">{{t("message.teamTemplate")}}</el-tab-pane>
     </el-tabs>
   </div>
 </template>

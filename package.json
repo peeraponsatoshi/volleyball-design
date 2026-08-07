@@ -22,6 +22,7 @@
     "@icon-park/vue-next": "^1.4.2",
     "@vueuse/core": "^10.11.0",
     "@vueuse/shared": "^10.11.0",
+    "ag-psd": "^31.0.2",
     "axios": "^1.7.2",
     "beautify-qrcode": "^1.0.3",
     "changedpi": "^1.0.4",

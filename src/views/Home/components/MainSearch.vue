@@ -1,11 +1,11 @@
 <template>
   <el-row :gutter="20" class="h-[100px] flex items-center row-home">
     <el-col :span="10" :offset="7">
-      <el-input class="h-[40px]" :prefix-icon="Search" placeholder="五一假期">
+      <el-input class="h-[40px]" :prefix-icon="Search" placeholder="ค้นหาเทมเพลต...">
         <template #append>
-          <el-select v-model="searchSelect" placeholder="Select">
-            <el-option label="精选模版" value="1" />
-            <el-option label="我的空间" value="2" />
+          <el-select v-model="searchSelect" placeholder="เลือก">
+            <el-option label="เทมเพลตแนะนำ" value="1" />
+            <el-option label="พื้นที่ของฉัน" value="2" />
           </el-select>
         </template>
       </el-input>

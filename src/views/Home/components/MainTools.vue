@@ -2,7 +2,7 @@
   <div class="page-section-container mb-10" >
     <section>
       <div class="section-header">
-        <h2 class="title-wrapper">常用工具</h2>
+        <h2 class="title-wrapper">เครื่องมือที่ใช้บ่อย</h2>
       </div>
       <div class="tools-wrapper">
         <div v-for="item in HomeTools" :key="item.name">
@@ -13,7 +13,7 @@
     </section>
     <section>
       <div class="section-header">
-        <h2 class="title-wrapper">常用物料</h2>
+        <h2 class="title-wrapper">วัสดุที่ใช้บ่อย</h2>
       </div>
       <!-- Image TODO -->
       <div class="materials-wrapper">
@@ -28,12 +28,12 @@
   <div class="page-section-container">
     <section>
       <div class="section-header">
-        <h2 class="title-wrapper">编辑推荐</h2>
+        <h2 class="title-wrapper">แนะนำโดยทีมงาน</h2>
       </div>
       <div class="editor-recommend">
         <div>
           <div v-for="item in ['img1','img2','img3','img4']" :key="item">{{ item }}</div>
-          <p>每日-新品推介</p>
+          <p>อัปเดตรายวัน - แนะนำใหม่</p>
         </div>
         <div>
           <div>img1</div>
@@ -46,7 +46,7 @@
     </section>
     <section>
       <div class="section-header">
-        <h2 class="title-wrapper">热点日历</h2>
+        <h2 class="title-wrapper">ปฏิทินเทรนด์</h2>
       </div>
       <div class="hot-topic-calendar">
         <div>1</div>

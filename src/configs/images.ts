@@ -168,7 +168,7 @@ export const CLIPPATHS = {
     },
   },
   chevron: {
-    name: 'V形',
+    name: 'ทรง V',
     type: ClipPathTypes.POLYGON,
     style: 'polygon(75% 0%, 100% 50%, 75% 100%, 0% 100%, 25% 50%, 0% 0%)',
     createPath: (width: number, height: number) => {
@@ -176,7 +176,7 @@ export const CLIPPATHS = {
     },
   },
   point: {
-    name: '点',
+    name: 'ปลายแหลม',
     type: ClipPathTypes.POLYGON,
     style: 'polygon(0% 0%, 75% 0%, 100% 50%, 75% 100%, 0% 100%)',
     createPath: (width: number, height: number) => {

@@ -17,7 +17,7 @@
       </el-row> -->
       <el-row class="pop-row" @click="createTemplate()">
         <IconPlus class="pop-icon"/>
-        <span class="pop-text">添加模板</span>
+        <span class="pop-text">เพิ่มหน้า / เทมเพลต</span>
       </el-row>
       <el-row class="pop-row">
         <IconNewlybuild class="pop-icon"/>

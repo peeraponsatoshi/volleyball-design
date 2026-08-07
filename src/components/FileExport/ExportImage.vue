@@ -9,7 +9,7 @@
         </el-radio-group>
       </div>
       <div class="row">
-        <div class="title">{{ t('exportRange') }}：</div>
+        <div class="title">{{ t('message.exportRange') }}：</div>
         <el-radio-group class="config-item" v-model="rangeType">
           <el-radio-button style="width: 50%;" value="all" label="all">{{ t('message.allPages') }}</el-radio-button>
           <el-radio-button style="width: 50%;" value="current" label="current">{{ t('message.currentPage') }}</el-radio-button>

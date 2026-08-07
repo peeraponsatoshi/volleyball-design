@@ -22,6 +22,7 @@ import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMainStore } from '@/store'
 import { ExportTypes } from '@/types/common'
+import useI18n from '@/hooks/useI18n'
 
 import ExportImage from './ExportImage.vue'
 import ExportSVG from './ExportSVG.vue'
@@ -33,6 +34,7 @@ const mainStore = useMainStore()
 const { exportType } = storeToRefs(mainStore)
 const dialogVisible = ref(false)
 const setExportType = mainStore.setExportType
+const { t } = useI18n()
 
 
 const props = defineProps({
@@ -55,13 +57,12 @@ interface TabItem {
   label: string
 }
 
-const tabs: TabItem[] = [
-  { key: 'image', label: 'ส่งออกรูปภาพ' },
-  { key: 'svg', label: 'ส่งออก SVG' },
-  { key: 'pdf', label: 'ส่งออก PDF' },
-  // { key: 'psd', label: 'ส่งออก PSD' },
-  { key: 'json', label: 'ส่งออก JSON' },
-]
+const tabs = computed<TabItem[]>(() => [
+  { key: 'image', label: t('message.exportImages') },
+  { key: 'svg', label: t('message.exportSVG') },
+  { key: 'pdf', label: t('message.exportPDF') },
+  { key: 'json', label: t('message.exportJSON') },
+])
 
 const currentDialogComponent = computed(() => {
   const dialogMap = {

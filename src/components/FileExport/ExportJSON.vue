@@ -4,17 +4,18 @@
       <pre>{{ getJSONData() }}</pre>
     </div>
     <div class="btns">
-      <el-button class="btn export" type="primary" @click="exportJSON()">导出 JSON</el-button>
-      <el-button class="btn close" @click="emit('close')">关闭</el-button>
+      <el-button class="btn export" type="primary" @click="exportJSON()">{{ t('message.exportJSON') }}</el-button>
+      <el-button class="btn close" @click="emit('close')">{{ t('message.close') }}</el-button>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import useCanvasExport from '@/hooks/useCanvasExport'
+import useI18n from '@/hooks/useI18n'
 
 const emit = defineEmits<{(event: 'close'): void}>()
-
+const { t } = useI18n()
 const { exportJSON, getJSONData } = useCanvasExport()
 
 </script>

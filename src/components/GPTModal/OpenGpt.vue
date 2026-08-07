@@ -9,11 +9,11 @@
 <template>
    <el-dialog v-model="dialogVisible" :width="500" :title="$t('gpt.openGPTTitle')"  class="upload-dialog"  :before-close="handleClose" :close-on-click-modal="false">
     <div>
-      <div class="mb-[20px] text-center">初级变中级，中级变高级，让前端开发更轻松高效!</div>
-      <div class="mb-[20px] text-center">限时优惠，数量有限，先到先得!</div>
+      <div class="mb-[20px] text-center">ฟีเจอร์ AI กำลังพัฒนาสำหรับคอนเทนต์วอลเลย์</div>
+      <div class="mb-[20px] text-center">ใช้เทมเพลตและเครื่องมือที่มีอยู่ได้ทันที</div>
       <div class="cursor-pointer text-center text-[18px] font-bold" @click="handleCopy">
         <div>
-          <IconCopyOne />点击复制<IconWechat />微信号 <el-tag>15972699417</el-tag> 
+          <IconCopyOne /> คลิกเพื่อคัดลอก <IconWechat /> WeChat ID <el-tag>15972699417</el-tag> 
         </div>
       </div>
     </div>
@@ -49,7 +49,7 @@ const handleClose = debounce(function() {
 
 const handleCopy = debounce(async function() {
   const result = await copyText('15972699417')
-  result && ElMessage.success('复制成功')
+  result && ElMessage.success('คัดลอกแล้ว')
 }, 250)
 
 watch(() => props.visible, (val) => {

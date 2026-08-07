@@ -8,7 +8,7 @@
     <div v-if="visible">
       <canvas ref="thumbnailTemplate"></canvas>
     </div>
-    <div class="placeholder" v-else>加载中 ...</div>
+    <div class="placeholder" v-else>กำลังโหลด...</div>
   </div>
 </template>
 

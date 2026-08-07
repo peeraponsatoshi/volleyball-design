@@ -8,7 +8,7 @@
           v-for="tab in tabs" 
           :key="tab.key"
           @click="setExportType(tab.key)"
-        >{{tab.label}}</div>
+        >{{ tab.label }}</div>
       </div>
       <div class="content">
         <component :is="currentDialogComponent" @close="closeExport"></component>
@@ -22,6 +22,7 @@ import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMainStore } from '@/store'
 import { ExportTypes } from '@/types/common'
+import useI18n from '@/hooks/useI18n'
 
 import ExportImage from './ExportImage.vue'
 import ExportSVG from './ExportSVG.vue'
@@ -33,7 +34,7 @@ const mainStore = useMainStore()
 const { exportType } = storeToRefs(mainStore)
 const dialogVisible = ref(false)
 const setExportType = mainStore.setExportType
-
+const { t } = useI18n()
 
 const props = defineProps({
   visible: {
@@ -55,13 +56,12 @@ interface TabItem {
   label: string
 }
 
-const tabs: TabItem[] = [
-  { key: 'image', label: '导出图片' },
-  { key: 'svg', label: '导出SVG' },
-  { key: 'pdf', label: '导出PDF' },
-  // { key: 'psd', label: '导出PSD' },
-  { key: 'json', label: '导出JSON' },
-]
+const tabs = computed<TabItem[]>(() => [
+  { key: 'image', label: t('message.exportImages') },
+  { key: 'svg', label: t('message.exportSVG') },
+  { key: 'pdf', label: t('message.exportPDF') },
+  { key: 'json', label: t('message.exportJSON') },
+])
 
 const currentDialogComponent = computed(() => {
   const dialogMap = {
@@ -78,11 +78,9 @@ const currentDialogComponent = computed(() => {
 const closeExport = () => {
   emit('close')
 }
-
 </script>
 
 <style lang="scss" scoped>
-
 .tabs {
   height: 50px;
   font-size: 12px;
@@ -101,38 +99,18 @@ const closeExport = () => {
   background-color: $lightGray;
   border-bottom: 1px solid $borderColor;
   cursor: pointer;
-
+  &:not(:last-child) {
+    border-right: 1px solid $borderColor;
+  }
   &.active {
     background-color: #fff;
-    border-bottom-color: #fff;
-  }
-
-  & + .tab {
-    border-left: 1px solid $borderColor;
+    border-bottom-color: transparent;
+    font-weight: 600;
   }
 }
 .content {
-  height: 400px;
-  padding: 12px;
-  font-size: 13px;
-
-  @include overflow-overlay();
-}
-</style>
-
-<style>
-.export-dialog {
-  padding: 0;
-}
-.export-dialog .el-dialog__body {
-  padding: 0;
-}
-
-.export-dialog .el-dialog__header {
-  padding: 0;
-}
-
-.export-dialog .el-dialog__headerbtn {
-  display: none;
+  height: 420px;
+  padding: 20px;
+  overflow: auto;
 }
 </style>

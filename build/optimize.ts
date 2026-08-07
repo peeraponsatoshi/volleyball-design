@@ -79,7 +79,8 @@ const include = [
   'element-plus/es/components/collapse/style/css',
   'element-plus/es/components/collapse-item/style/css',
   'element-plus/es/components/button-group/style/css',
-  'element-plus/es/components/text/style/css'
+  'element-plus/es/components/text/style/css',
+  'ag-psd'
 ]
 
 const exclude = []

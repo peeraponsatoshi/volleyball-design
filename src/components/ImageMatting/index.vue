@@ -103,7 +103,7 @@
           type="primary"
           @click="replaceImage"
         >
-          替换
+          {{ t("style.replaceimage") }}
         </el-button>
       </div>
     </template>

@@ -5,11 +5,11 @@
         <UploadFilled />
       </el-icon>
       <div class="el-upload__text">
-        拖拽图片到这里 或者 <em>选择图片上传</em>
+        ลากรูปมาวางที่นี่ หรือ <em>เลือกไฟล์อัปโหลด</em>
       </div>
       <template #tip>
         <div class="el-upload__tip">
-          支持图片格式
+          รองรับไฟล์รูปภาพ (jpg, png, webp)
         </div>
       </template>
     </el-upload>

@@ -105,6 +105,7 @@ export default ({ command, mode }: ConfigEnv): UserConfigExport => {
             'opentype.js': ['opentype.js'],
             'clipper-lib': ['clipper-lib'],
             'element-plus': ['element-plus'],
+            'ag-psd': ['ag-psd'],
           },
           // manualChunks(id, any): string {
           //   return id

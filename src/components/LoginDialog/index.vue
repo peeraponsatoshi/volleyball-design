@@ -2,10 +2,10 @@
   <el-dialog v-model="dialogVisible" title="" :width="dialogWidth" class="login-dialog" :before-close="closeLogin">
     <el-row>
       <el-row class="text-[20px] text-[#222529] font-semibold leading-snug justify-center">
-        {{loginInfo}}登录
+        {{ loginInfo }}เข้าสู่ระบบ
       </el-row>
       <el-row class="text-[12px] mt-[10px] justify-center">
-        仅用于身份识别，yft-design不会获取您的任何隐私信息~
+        ใช้ยืนยันตัวตนเท่านั้น ระบบจะไม่เก็บข้อมูลส่วนตัวของคุณ
       </el-row>
       <el-row v-if="loginType === 1">
         <div class="overflow-hidden relative mt-[20px] mx-auto p-[10px] border border-solid border-[rgba(0, 0, 0, .08)] rounded-[8px] justify-center">
@@ -31,16 +31,16 @@
             </el-form-item>
             <el-form-item v-if="checkType === 2" class="captcha">
               <el-input style="width: 120px;" v-model="ruleForm.captcha"/>
-              <el-button @click="getEmailCaptcha">获取验证码</el-button>
+              <el-button @click="getEmailCaptcha">ขอรหัส OTP</el-button>
             </el-form-item>
           </el-form>
         </el-row>
         <el-row class="content-center">
-          <el-button class="w-[230px]" type="primary" @click="handleVerify">{{ checkType === 1 ? '登录' : '注册' }}</el-button>
+          <el-button class="w-[230px]" type="primary" @click="handleVerify">{{ checkType === 1 ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก' }}</el-button>
         </el-row>
         <el-row class="content-center mt-[5px] text-[12px]">
-          <span v-if="checkType === 1">没有账号？点击<a href="javascript:;" class="text-[#1e2ad7] font-[800]" @click="changeCheckType(2)">注册账号</a></span>
-          <span v-if="checkType === 2">已有账号！<a href="javascript:;" class="text-[#1e2ad7] font-[800]" @click="changeCheckType(1)">立即登陆</a></span>
+          <span v-if="checkType === 1">ยังไม่มีบัญชี? <a href="javascript:;" class="text-[#1e2ad7] font-[800]" @click="changeCheckType(2)">สมัครสมาชิก</a></span>
+          <span v-if="checkType === 2">มีบัญชีแล้ว <a href="javascript:;" class="text-[#1e2ad7] font-[800]" @click="changeCheckType(1)">เข้าสู่ระบบ</a></span>
         </el-row>
       </el-row>
       <el-row class="mt-[28px] justify-center">
@@ -61,7 +61,7 @@
     </el-row>
     <template #footer>
       <el-row class="justify-center text-[12px] text-[#9da3ac]">
-        登录即代表您同意《<strong><a href="" class="hover:text-blue-700">用户服务协议</a></strong>》
+        การเข้าสู่ระบบถือว่าคุณยอมรับ <strong><a href="" class="hover:text-blue-700">ข้อกำหนดการใช้งาน</a></strong>
       </el-row>
     </template>
   </el-dialog>
@@ -85,7 +85,7 @@ const dialogWidth = computed(() => isMobile() ? '75%' : '35%')
 const qrcode = ref('')
 const checkType = ref(1)
 const loginType = ref(2)
-const loginInfo = ref('用户')
+const loginInfo = ref('ผู้ใช้')
 const loginCaptchaImage = ref('')
 const loginCaptchaLoading = ref(false)
 const { loginStatus, username } = storeToRefs(useUserStore())
@@ -106,21 +106,21 @@ const rules = reactive<FormRules<OauthVerifyData>>({
   email: [
     {
       required: true,
-      message: '请输入邮箱',
+      message: 'กรุณากรอกอีเมล',
       trigger: 'blur',
     },
   ],
   password: [
     {
       required: true,
-      message: '请输入密码',
+      message: 'กรุณากรอกรหัสผ่าน',
       trigger: 'blur',
     },
   ],
   captcha: [
     {
       required: true,
-      message: '请输入验证码',
+      message: 'กรุณากรอกรหัสยืนยัน',
       trigger: 'blur',
     },
   ],
@@ -182,7 +182,7 @@ const handleVerify = () => {
 const handleRegister = async () => {
   const result = await oauthRegister(ruleForm)
   if (result.data.code === 200 && result.data.data.code) {
-    ElMessage.success('注册成功')
+    ElMessage.success('สมัครสมาชิกสำเร็จ')
     const code = result.data.data.code
     await handleLogin(code)
   }
@@ -197,7 +197,7 @@ const handleLogin = async (code?: string) => {
     localStorage.set('access_token', userResult.access_token)
     username.value = userResult.user.username
     emit('close', false)
-    ElMessage.success('登陆成功')
+    ElMessage.success('เข้าสู่ระบบสำเร็จ')
   }
 }
 
@@ -220,12 +220,12 @@ const loginGithub = async () => {
 
 const loginQQ = () => {
   loginType.value = 1
-  loginInfo.value = '微信'
+  loginInfo.value = 'WeChat'
 }
 
 const loginEmail = () => {
   loginType.value = 2
-  loginInfo.value = '用户'
+  loginInfo.value = 'ผู้ใช้'
   getOauthCaptcha()
 }
 

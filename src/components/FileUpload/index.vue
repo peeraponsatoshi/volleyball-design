@@ -25,6 +25,7 @@ import useHandleTemplate from '@/hooks/useHandleTemplate'
 import { useTemplatesStore } from '@/store'
 import { Template } from "@/types/canvas"
 import { getImageDataURL, getImageText } from '@/utils/image'
+import { psdToTemplate } from '@/utils/psd'
 import useCanvas from '@/views/Canvas/useCanvas'
 import { UploadFilled } from '@element-plus/icons-vue'
 import { genFileId, UploadInstance, UploadProps, UploadRawFile } from "element-plus"
@@ -121,6 +122,19 @@ const uploadHandle = async (option: any) => {
     const dataURL = URL.createObjectURL(option.file)
     createVideoElement(dataURL)
     emit('close')
+    return
+  }
+  if (fileSuffix === 'psd') {
+    // แปลง PSD ในตัว (ag-psd) — ไม่พึ่ง backend
+    uploading.value = true
+    try {
+      const template = await psdToTemplate(option.file)
+      await templatesStore.addTemplate(template)
+      setCanvasTransform()
+      emit('close')
+    } finally {
+      uploading.value = false
+    }
     return
   }
   uploading.value = true

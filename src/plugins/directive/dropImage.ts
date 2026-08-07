@@ -1,6 +1,7 @@
 import { DirectiveBinding, ObjectDirective } from "vue";
 import useCanvas from "@/views/Canvas/useCanvas";
 import { getImageDataURL, getImageText } from "@/utils/image";
+import { psdToTemplate } from "@/utils/psd";
 import useHandleTemplate from "@/hooks/useHandleTemplate";
 import useHandleCreate from "@/hooks/useHandleCreate";
 import useCanvasScale from "@/hooks/useCanvasScale";
@@ -68,6 +69,12 @@ const defaultUpload = async (files: FileList, uploadUrl: string): Promise<void> 
     if (["jpg", "jpeg", "png", "webp"].includes(curFileSuffix as string)) {
       const dataURL = await getImageDataURL(file);
       createImageElement(dataURL);
+    }
+    if (curFileSuffix === "psd") {
+      const template = await psdToTemplate(file);
+      await templatesStore.addTemplate(template);
+      setCanvasTransform();
+      return;
     }
     const res1 = await uploadFile(file, curFileSuffix as string);
     if (res1 && res1.data.code === 200) {
