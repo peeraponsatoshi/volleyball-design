@@ -10,8 +10,8 @@ import { Template } from '@/types/canvas'
 const TOKEN_KEY = 'YFT_GOOGLE_DRIVE_TOKEN'
 const TOKEN_EXPIRE_KEY = 'YFT_GOOGLE_DRIVE_TOKEN_EXPIRE'
 const DEFAULT_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '95584897723-00nkagcchqv4pird98q95bo9dh6ara56.apps.googleusercontent.com'
-const DRIVE_FOLDER_NAME = 'Volleyball Design Projects'
-const SCOPES = 'https://www.googleapis.com/auth/drive.file'
+const BASE_FOLDER_NAME = 'Volleyball Design Projects'
+const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email'
 
 export interface DriveProject {
   id: string
@@ -97,6 +97,22 @@ export const getAccessToken = (clientId: string = DEFAULT_CLIENT_ID): Promise<st
 }
 
 /**
+ * ดึงอีเมลของบัญชี Google ที่ล็อกอินอยู่
+ */
+export const getUserEmail = async (token: string): Promise<string> => {
+  try {
+    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (res.ok) {
+      const data = await res.json()
+      return data.email || ''
+    }
+  } catch (e) {}
+  return ''
+}
+
+/**
  * ยกเลิกการเชื่อมต่อ / ลบแคช Token
  */
 export const logoutGoogleDrive = () => {
@@ -112,9 +128,14 @@ export const logoutGoogleDrive = () => {
 
 /**
  * ค้นหาหรือสร้างโฟลเดอร์สำหรับเก็บงานใน Google Drive
+ * (จะระบุชื่ออีเมลของผู้ใช้ลงบนชื่อโฟลเดอร์ เช่น Volleyball Design Projects (peeraponsatoshi@gmail.com))
  */
 const getOrCreateAppFolder = async (accessToken: string): Promise<string> => {
-  const query = `name = '${DRIVE_FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+  const email = await getUserEmail(accessToken)
+  const folderName = email ? `${BASE_FOLDER_NAME} (${email})` : BASE_FOLDER_NAME
+
+  // ค้นหาโฟลเดอร์ชื่อเฉพาะเจาะจง หรือโฟลเดอร์ตั้งต้นเดิม
+  const query = `(name = '${folderName}' or name = '${BASE_FOLDER_NAME}') and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
   const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}`
 
   const searchRes = await fetch(searchUrl, {
@@ -126,6 +147,7 @@ const getOrCreateAppFolder = async (accessToken: string): Promise<string> => {
     return searchData.files[0].id
   }
 
+  // ถ้ายังไม่มีโฟลเดอร์ ให้สร้างโฟลเดอร์ใหม่ชื่อระบุอีเมล
   const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
     method: 'POST',
     headers: {
@@ -133,7 +155,7 @@ const getOrCreateAppFolder = async (accessToken: string): Promise<string> => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      name: DRIVE_FOLDER_NAME,
+      name: folderName,
       mimeType: 'application/vnd.google-apps.folder',
     }),
   })
@@ -179,7 +201,6 @@ const saveThumbnailImage = async (
     const blob = dataURLtoBlob(thumbnailDataUrl)
 
     if (existingPngId) {
-      // อัปเดตรูป PNG เดิม
       await fetch(
         `https://www.googleapis.com/upload/drive/v3/files/${existingPngId}?uploadType=media`,
         {
@@ -192,7 +213,6 @@ const saveThumbnailImage = async (
         },
       )
     } else {
-      // สร้างรูป PNG ใหม่พร้อม Metadata (แก้ไข string formatting ให้ถูกต้อง)
       const metadata = {
         name: pngName,
         parents: [folderId],
@@ -264,7 +284,6 @@ export const saveProjectToDrive = async (
   const cleanName = projectName || 'งานออกแบบที่ไม่ระบุชื่อ'
   const fileName = `${cleanName}.json`
 
-  // แนบรูปพรีวิวลงในโครงสร้าง template
   const payload = {
     ...template,
     _previewThumbnail: thumbnailDataUrl || '',
@@ -279,7 +298,6 @@ export const saveProjectToDrive = async (
 
   let resultFileId = existingFileId
 
-  // อัปเดตไฟล์เดิม
   if (existingFileId) {
     const updateUrl = `https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=multipart`
     const bodyBlob = createMultipartBlob(metadata, fileContent)
@@ -298,7 +316,6 @@ export const saveProjectToDrive = async (
     const data = await res.json()
     resultFileId = data.id
   } else {
-    // สร้างไฟล์ใหม่
     metadata.parents = [folderId]
     const uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart'
     const bodyBlob = createMultipartBlob(metadata, fileContent)
@@ -318,7 +335,6 @@ export const saveProjectToDrive = async (
     resultFileId = data.id
   }
 
-  // เซฟรูป PNG พรีวิวแยกไว้คู่กับไฟล์ JSON เพื่อการแสดงผลที่เร็วและแน่นอน 100%
   if (thumbnailDataUrl) {
     await saveThumbnailImage(token, folderId, cleanName, thumbnailDataUrl)
   }
@@ -333,7 +349,6 @@ export const listDriveProjects = async (clientId?: string): Promise<DriveProject
   const token = await getAccessToken(clientId)
   const folderId = await getOrCreateAppFolder(token)
 
-  // ดึงทั้งไฟล์ .json และไฟล์ .png ในโฟลเดอร์เดียวกัน
   const query = `'${folderId}' in parents and trashed = false`
   const fields = 'files(id, name, modifiedTime, size, mimeType)'
   const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent(fields)}&orderBy=modifiedTime desc`
@@ -357,7 +372,6 @@ export const listDriveProjects = async (clientId?: string): Promise<DriveProject
     f => f.name.endsWith('.png') || f.mimeType === 'image/png',
   )
 
-  // จับคู่ไฟล์ .json กับ .png ที่ชื่อเดียวกัน
   const projects = await Promise.all(
     jsonFiles.map(async file => {
       const baseName = file.name.replace(/\.json$/, '')
@@ -378,7 +392,6 @@ export const listDriveProjects = async (clientId?: string): Promise<DriveProject
         } catch (e) {}
       }
 
-      // ถ้ายังไม่มีรูป PNG แยก (สำหรับไฟล์เก่า) ให้ดึง _previewThumbnail จากไฟล์ .json โดยตรง
       if (!thumbnailUrl) {
         try {
           const jsonRes = await fetch(
