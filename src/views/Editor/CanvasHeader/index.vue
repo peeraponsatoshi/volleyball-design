@@ -93,7 +93,16 @@
 
 <script lang="ts" setup>
 
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
+
+onMounted(() => {
+  if (router.currentRoute.value.query.import === '1') {
+    uploadFileDialog.value = true;
+  }
+});
 import { ElementNames } from "@/types/elements";
 import { storeToRefs } from "pinia";
 import { Object as FabricObject, Group } from "fabric";

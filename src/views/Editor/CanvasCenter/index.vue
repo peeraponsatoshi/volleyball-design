@@ -20,13 +20,36 @@ import { contextMenus } from '@/configs/contextMenu'
 import { initEditor } from '@/views/Canvas/useCanvas'
 import { ElMessage, ElLoading } from 'element-plus'
 import useCanvasHotkey from '@/hooks/useCanvasHotkey'
+import { loadDriveProject } from '@/utils/googleDrive'
+import useCanvasScale from '@/hooks/useCanvasScale'
+
 const fabricStore = useFabricStore()
 const mainStore = useMainStore()
 const router = useRouter()
 const templatesStore = useTemplatesStore()
+const { setCanvasTransform } = useCanvasScale()
 const { wrapperRef, canvasRef } = storeToRefs(fabricStore)
 const { drawAreaFocus } = storeToRefs(mainStore)
 const { keydownListener, keyupListener, pasteListener } = useCanvasHotkey()
+
+const initDriveProject = async (driveFileId: string) => {
+  const loadingInstance = ElLoading.service({
+    fullscreen: true,
+    background: 'rgba(0, 0, 0, 0.6)',
+    text: 'กำลังโหลดงานจาก Google Drive...',
+  })
+  try {
+    const templateData = await loadDriveProject(driveFileId)
+    await templatesStore.changeTemplate(templateData)
+    await nextTick()
+    setCanvasTransform()
+    ElMessage.success('โหลดงานจาก Google Drive สำเร็จ')
+  } catch (e: any) {
+    ElMessage.error(e.message || 'ไม่สามารถโหลดงานจาก Google Drive ได้')
+  } finally {
+    loadingInstance.close()
+  }
+}
 
 
 const addDrawAreaFocus = () => {
@@ -66,8 +89,12 @@ const initRouter = async (templateId?: number) => {
 
 onMounted(async () => {
   const query = router.currentRoute.value.query
-  initRouter(query.template)
-  initEditor(query.template)
+  initEditor(query.template as any)
+  if (query.driveFileId) {
+    await initDriveProject(String(query.driveFileId))
+  } else {
+    initRouter(query.template as any)
+  }
   document.addEventListener('keydown', keydownListener)
   document.addEventListener('keyup', keyupListener)
   window.addEventListener('blur', keyupListener)
